@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Porsche Sales Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b0b0b; --panel:#151515; --panel2:#1c1c1c; --line:#2b2b2b;
+  --text:#f4f4f2; --muted:#9c9c98; --accent:#d5001c; --accent2:#ef3340;
+  --silver:#c9c9c5; --green:#7eaa82; --shadow:0 20px 50px rgba(0,0,0,.32);
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(145deg,#090909,#141414 55%,#090909);color:var(--text);
+font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:1600px;margin:auto;padding:28px 34px 42px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 24px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:15px}
+.crest{width:44px;height:44px;border:1px solid #555;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;letter-spacing:1px;background:#111}
+.eyebrow{font-size:10px;letter-spacing:3px;color:#aaa;text-transform:uppercase}
+h1{font-size:30px;line-height:1;margin:5px 0 0;font-weight:650;letter-spacing:-1px}
+.period{font-size:12px;color:var(--muted);text-align:right}
+.filters{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:12px;margin:22px 0}
+select,.reset{background:#111;color:#eee;border:1px solid #383838;border-radius:8px;padding:12px 13px;font-size:13px;outline:none}
+select:focus{border-color:#777}
+.reset{cursor:pointer;padding:0 18px;text-transform:uppercase;letter-spacing:1.5px;font-size:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.card{background:linear-gradient(145deg,#181818,#121212);border:1px solid #292929;border-radius:12px;box-shadow:var(--shadow)}
+.kpi{padding:19px 20px;position:relative;overflow:hidden}
+.kpi:after{content:"";position:absolute;right:-30px;bottom:-35px;width:100px;height:100px;border-radius:50%;background:rgba(213,0,28,.10)}
+.kpi-label{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}
+.kpi-value{font-size:30px;font-weight:650;margin-top:8px;letter-spacing:-1px}
+.kpi-note{font-size:11px;color:#777;margin-top:5px}
+.grid{display:grid;grid-template-columns:1.3fr .7fr;gap:16px;margin-top:16px}
+.chart-card{padding:20px}
+.card-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:15px}
+.card-title{font-size:15px;font-weight:600}
+.card-sub{font-size:11px;color:#777;margin-top:4px}
+.chart-wrap{height:315px}
+.insights{padding:20px}
+.insight{border-top:1px solid var(--line);padding:16px 0}
+.insight:first-child{border-top:0;padding-top:0}
+.badge{display:inline-flex;border:1px solid #3a3a3a;padding:5px 8px;border-radius:999px;font-size:9px;letter-spacing:1.1px;text-transform:uppercase;color:#bbb;margin-bottom:8px}
+.insight strong{display:block;font-size:17px;line-height:1.25}
+.insight p{font-size:12px;line-height:1.6;color:#999;margin:7px 0 0}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.table-card{padding:20px}
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th{text-align:left;color:#777;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;padding:10px 7px;border-bottom:1px solid #333}
+.table td{padding:11px 7px;border-bottom:1px solid #242424}
+.rank{color:#aaa;width:35px}
+.model{font-weight:600}
+.bar{height:5px;background:#282828;border-radius:99px;overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#ff5360)}
+.footer{display:flex;justify-content:space-between;color:#666;font-size:10px;margin-top:18px}
+.empty{height:100%;display:grid;place-items:center;color:#777;font-size:12px}
+@media(max-width:1000px){.filters,.kpis{grid-template-columns:1fr 1fr}.grid,.bottom{grid-template-columns:1fr}}
+@media(max-width:650px){.app{padding:18px}.filters,.kpis{grid-template-columns:1fr}.topbar{align-items:flex-start}.period{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="crest">PORSCHE</div>
+      <div><div class="eyebrow">Sales Intelligence</div><h1>Performance de Vendas</h1></div>
+    </div>
+    <div class="period">DASHBOARD EXECUTIVO<br><span id="updated">Base analisada</span></div>
+  </div>
+
+  <div class="filters">
+    <select id="model"><option value="">Modelo da Porsche · Todos</option></select>
+    <select id="year"><option value="">Model Year · Todos</option></select>
+    <select id="city"><option value="">City · Todas</option></select>
+    <select id="pay"><option value="">Pay Method · Todos</option></select>
+    <button class="reset" onclick="resetFilters()">Limpar filtros</button>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi"><div class="kpi-label">Vendas</div><div class="kpi-value" id="kpiSales">—</div><div class="kpi-note">unidades no recorte</div></div>
+    <div class="card kpi"><div class="kpi-label">Receita</div><div class="kpi-value" id="kpiRevenue">—</div><div class="kpi-note">valor agregado</div></div>
+    <div class="card kpi"><div class="kpi-label">Modelo líder</div><div class="kpi-value" id="kpiModel">—</div><div class="kpi-note" id="kpiModelNote">maior volume</div></div>
+    <div class="card kpi"><div class="kpi-label">Model Year líder</div><div class="kpi-value" id="kpiYear">—</div><div class="kpi-note" id="kpiYearNote">maior volume</div></div>
+  </div>
+
+  <div class="grid">
+    <section class="card chart-card">
+      <div class="card-head"><div><div class="card-title">Principais modelos por cidade</div><div class="card-sub">Top modelos no recorte atual</div></div></div>
+      <div class="chart-wrap"><canvas id="cityModelChart"></canvas></div>
+    </section>
+    <section class="card insights">
+      <div class="card-head"><div><div class="card-title">Leituras executivas</div><div class="card-sub">Insights derivados dos filtros</div></div></div>
+      <div id="insights"></div>
+    </section>
+  </div>
+
+  <div class="bottom">
+    <section class="card table-card">
+      <div class="card-head"><div><div class="card-title">Modelos mais populares</div><div class="card-sub">Ranking por volume de vendas</div></div></div>
+      <div id="modelTable"></div>
+    </section>
+    <section class="card chart-card">
+      <div class="card-head"><div><div class="card-title">Vendas por Model Year</div><div class="card-sub">Identificação do ano de maior saída</div></div></div>
+      <div class="chart-wrap"><canvas id="yearChart"></canvas></div>
+    </section>
+  </div>
+
+  <div class="footer"><span>Fonte: base de vendas Porsche fornecida</span><span>Interface inspirada na linguagem visual Porsche · não oficial</span></div>
+</div>
+
+<script>
+const DATA = [{"sale_id": "6", "date": "INVALID", "model": "718 Cayman", "year": "2022", "price": 79500.0, "pay": "Credit Card", "city": "Boston", "state": "MA", "status": "Delivered"}, {"sale_id": "7", "date": "2024-03-14", "model": "911 Turbo S", "year": "2024", "price": 235000.0, "pay": "Wire Transfer", "city": "Seattle", "state": "WA", "status": "Delivered"}, {"sale_id": "8", "date": "2024-04-18", "model": "Cayenne Coupe", "year": "2023", "price": 112750.0, "pay": "Financing", "city": "Austin", "state": "TX", "status": "In Transit"}, {"sale_id": "9", "date": "INVALID", "model": "Macan S", "year": "2021", "price": 68900.0, "pay": "Cash", "city": "Denver", "state": "CO", "status": "Pending"}, {"sale_id": "10", "date": "2024-05-22", "model": "Taycan 4S", "year": "2024", "price": 121000.0, "pay": "Bank Transfer", "city": "Los Angeles", "state": "CA", "status": "Delivered"}, {"sale_id": "11", "date": "2024-08-06", "model": "Panamera 4", "year": "2023", "price": 104500.0, "pay": "Credit Card", "city": "Miami", "state": "FL", "status": "Cancelled"}, {"sale_id": "12", "date": "2024-07-11", "model": "911 Carrera S", "year": "2020", "price": 96300.0, "pay": "Lease", "city": "New York", "state": "NY", "status": "Delivered"}, {"sale_id": "13", "date": "INVALID", "model": "Cayenne E-Hybrid", "year": "2022", "price": 89750.0, "pay": "Wire Transfer", "city": "San Diego", "state": "CA", "status": "Pending Approval"}, {"sale_id": "14", "date": "2024-08-19", "model": "718 Boxster", "year": "2021", "price": 73500.0, "pay": "Debit Card", "city": "Chicago", "state": "IL", "status": "Shipped"}, {"sale_id": "15", "date": "2024-09-02", "model": "Macan GTS", "year": "2024", "price": 95000.0, "pay": "Financing", "city": "Phoenix", "state": "AZ", "status": "In Transit"}, {"sale_id": "16", "date": "2024-09-17", "model": "Taycan Turbo", "year": "2023", "price": 153200.5, "pay": "ACH Payment", "city": "Dallas", "state": "TX", "status": "Delivered"}, {"sale_id": "17", "date": "INVALID", "model": "911 GT3", "year": "2024", "price": 241000.0, "pay": "Wire Transfer", "city": "Las Vegas", "state": "NV", "status": "Pending"}, {"sale_id": "18", "date": "2024-05-11", "model": "Panamera Turbo S", "year": "2022", "price": 132000.0, "pay": "Cash", "city": "San Jose", "state": "CA", "status": "Delivered"}, {"sale_id": "19", "date": "2024-12-12", "model": "Cayenne Turbo GT", "year": "2024", "price": 188000.0, "pay": "Crypto Payment", "city": "Houston", "state": "TX", "status": "Awaiting Delivery"}, {"sale_id": "20", "date": "2024-12-25", "model": "911 Carrera Cabriolet", "year": "2023", "price": 127800.0, "pay": "Credit Card", "city": "Atlanta", "state": "GA", "status": "Delivered"}, {"sale_id": "21", "date": "2025-01-06", "model": "Macan", "year": "2021", "price": 58900.0, "pay": "Bank Transfer", "city": "Orlando", "state": "FL", "status": "Pending"}, {"sale_id": "22", "date": "INVALID", "model": "718 Spyder RS", "year": "2024", "price": 164000.0, "pay": "Financing", "city": "Portland", "state": "OR", "status": "In Transit"}, {"sale_id": "23", "date": "2025-02-14", "model": "Taycan Cross Turismo", "year": "2023", "price": 118500.0, "pay": "Wire Transfer", "city": "Charlotte", "state": "NC", "status": "Delivered"}, {"sale_id": "24", "date": "INVALID", "model": "Cayenne S", "year": "2022", "price": 91300.0, "pay": "Credit Card", "city": "Nashville", "state": "TN", "status": "Pending"}, {"sale_id": "25", "date": "2025-03-21", "model": "911 Targa 4S", "year": "2024", "price": 158750.0, "pay": "Lease", "city": "Minneapolis", "state": "MN", "status": "Delivered"}, {"sale_id": "26", "date": "2025-03-28", "model": "Panamera", "year": "2020", "price": 72000.0, "pay": "Bank Transfer", "city": "Philadelphia", "state": "PA", "status": "Cancelled"}, {"sale_id": "27", "date": "2025-04-09", "model": "Macan Electric", "year": "2025", "price": 86500.0, "pay": "Wire Transfer", "city": "San Antonio", "state": "TX", "status": "Delivered"}, {"sale_id": "28", "date": "INVALID", "model": "911 Dakar", "year": "2024", "price": 270000.0, "pay": "Cash", "city": "Salt Lake City", "state": "UT", "status": "Awaiting Pickup"}, {"sale_id": "29", "date": "2025-05-12", "model": "Taycan GTS", "year": "2023", "price": 139000.0, "pay": "Financing", "city": "Raleigh", "state": "NC", "status": "In Transit"}, {"sale_id": "30", "date": "2025-06-18", "model": "Cayenne", "year": "2021", "price": 76800.0, "pay": "Credit Card", "city": "Detroit", "state": "MI", "status": "Delivered"}, {"sale_id": "31", "date": "INVALID", "model": "718 Cayman GT4 RS", "year": "2024", "price": 173600.0, "pay": "Wire Transfer", "city": "Columbus", "state": "OH", "status": "Pending"}, {"sale_id": "32", "date": "2025-07-07", "model": "911 Carrera GTS", "year": "2022", "price": 119900.0, "pay": "Cash", "city": "Indianapolis", "state": "IN", "status": "Delivered"}, {"sale_id": "33", "date": "2025-07-22", "model": "Panamera 4 E-Hybrid", "year": "2023", "price": 109250.0, "pay": "Lease", "city": "Fort Worth", "state": "TX", "status": "In Transit"}, {"sale_id": "34", "date": "2025-08-14", "model": "Macan T", "year": "2022", "price": 82000.0, "pay": "Wire Transfer", "city": "Jacksonville", "state": "FL", "status": "Delivered"}, {"sale_id": "35", "date": "2025-09-01", "model": "Taycan Turbo S", "year": "2025", "price": 214000.0, "pay": "Crypto Payment", "city": "San Diego", "state": "CA", "status": "Pending Review"}, {"sale_id": "36", "date": "INVALID", "model": "911 Carrera", "year": "2024", "price": 124500.0, "pay": "Credit Card", "city": "Tampa", "state": "FL", "status": "Delivered"}, {"sale_id": "37", "date": "2025-09-18", "model": "Cayenne S", "year": "2023", "price": 98200.0, "pay": "Bank Transfer", "city": "Sacramento", "state": "CA", "status": "Pending"}, {"sale_id": "38", "date": "2025-10-04", "model": "Macan", "year": "2022", "price": 67500.0, "pay": "Financing", "city": "Cleveland", "state": "OH", "status": "Delivered"}, {"sale_id": "39", "date": "2025-10-12", "model": "Taycan", "year": "2025", "price": 116900.0, "pay": "Wire Transfer", "city": "Milwaukee", "state": "WI", "status": "In Transit"}, {"sale_id": "40", "date": "2025-10-29", "model": "Panamera 4S", "year": "2024", "price": 112000.0, "pay": "Cash", "city": "Kansas City", "state": "MO", "status": "Delivered"}, {"sale_id": "41", "date": "2025-02-11", "model": "718 Boxster", "year": "2021", "price": 74000.0, "pay": "Debit Card", "city": "Omaha", "state": "NE", "status": "Cancelled"}, {"sale_id": "42", "date": "2025-11-16", "model": "911 Turbo", "year": "2024", "price": 198300.0, "pay": "Wire Transfer", "city": "Albuquerque", "state": "NM", "status": "Awaiting Delivery"}, {"sale_id": "43", "date": "INVALID", "model": "Cayenne Coupe", "year": "2023", "price": 103750.0, "pay": "Wire Transfer", "city": "Tucson", "state": "AZ", "status": "Pending Approval"}, {"sale_id": "44", "date": "INVALID", "model": "Macan GTS", "year": "2024", "price": 93600.0, "pay": "Financing", "city": "Fresno", "state": "CA", "status": "Shipped"}, {"sale_id": "45", "date": "2025-12-07", "model": "Taycan 4S", "year": "2025", "price": 129000.0, "pay": "ACH Payment", "city": "Virginia Beach", "state": "VA", "status": "In Transit"}, {"sale_id": "46", "date": "2025-12-22", "model": "Panamera Turbo", "year": "2022", "price": 136000.0, "pay": "Credit Card", "city": "Colorado Springs", "state": "CO", "status": "Delivered"}, {"sale_id": "47", "date": "INVALID", "model": "911 GT3 RS", "year": "2024", "price": 286500.0, "pay": "Wire Transfer", "city": "Arlington", "state": "TX", "status": "Pending"}, {"sale_id": "48", "date": "2026-01-08", "model": "Cayenne E-Hybrid", "year": "2023", "price": 92800.0, "pay": "Lease", "city": "Bakersfield", "state": "CA", "status": "Delivered"}, {"sale_id": "49", "date": "2026-01-15", "model": "Macan T", "year": "2022", "price": 72400.0, "pay": "Cash", "city": "Mesa", "state": "AZ", "status": "Awaiting Pickup"}, {"sale_id": "50", "date": "2026-01-28", "model": "Taycan Turbo", "year": "2025", "price": 158500.0, "pay": "Crypto Payment", "city": "Atlanta", "state": "GA", "status": "Delivered"}, {"sale_id": "51", "date": "2026-02-03", "model": "718 Cayman", "year": "2021", "price": 69900.0, "pay": "Bank Transfer", "city": "Long Beach", "state": "CA", "status": "Pending"}, {"sale_id": "52", "date": "INVALID", "model": "911 Targa 4", "year": "2024", "price": 141250.0, "pay": "Financing", "city": "Oakland", "state": "CA", "status": "In Transit"}, {"sale_id": "53", "date": "2026-02-19", "model": "Panamera", "year": "2020", "price": 71500.0, "pay": "Wire Transfer", "city": "Tulsa", "state": "OK", "status": "Delivered"}, {"sale_id": "54", "date": "2026-02-25", "model": "Cayenne Turbo", "year": "2023", "price": 146800.0, "pay": "Credit Card", "city": "Wichita", "state": "KS", "status": "Pending"}, {"sale_id": "55", "date": "2026-03-01", "model": "Macan Electric", "year": "2025", "price": 89700.0, "pay": "Lease", "city": "New Orleans", "state": "LA", "status": "Delivered"}, {"sale_id": "56", "date": "2026-03-14", "model": "911 Carrera S", "year": "2022", "price": 104600.0, "pay": "Bank Transfer", "city": "Honolulu", "state": "HI", "status": "Cancelled"}, {"sale_id": "57", "date": "INVALID", "model": "Taycan GTS", "year": "2024", "price": 142000.0, "pay": "Wire Transfer", "city": "Anaheim", "state": "CA", "status": "Delivered"}, {"sale_id": "58", "date": "2026-04-08", "model": "Cayenne", "year": "2021", "price": 78400.0, "pay": "Cash", "city": "Henderson", "state": "NV", "status": "Awaiting Review"}, {"sale_id": "59", "date": "INVALID", "model": "718 Spyder RS", "year": "2025", "price": 169000.0, "pay": "Financing", "city": "Lexington", "state": "KY", "status": "In Transit"}, {"sale_id": "60", "date": "2026-04-21", "model": "911 Dakar", "year": "2024", "price": 268900.0, "pay": "Credit Card", "city": "Riverside", "state": "CA", "status": "Delivered"}, {"sale_id": "61", "date": "2026-04-29", "model": "Panamera 4", "year": "2023", "price": 101300.0, "pay": "Wire Transfer", "city": "Corpus Christi", "state": "TX", "status": "Pending"}, {"sale_id": "62", "date": "2026-05-05", "model": "Macan S", "year": "2021", "price": 66750.0, "pay": "Cash", "city": "St. Louis", "state": "MO", "status": "Delivered"}, {"sale_id": "63", "date": "2026-05-14", "model": "Taycan Cross Turismo", "year": "2024", "price": 127900.0, "pay": "Lease", "city": "Pittsburgh", "state": "PA", "status": "In Transit"}, {"sale_id": "64", "date": "2026-05-23", "model": "Cayenne Turbo GT", "year": "2025", "price": 200000.0, "pay": "Wire Transfer", "city": "Cincinnati", "state": "OH", "status": "Delivered"}, {"sale_id": "65", "date": "2026-06-02", "model": "911 Carrera Cabriolet", "year": "2023", "price": 132000.0, "pay": "Crypto Payment", "city": "Anchorage", "state": "AK", "status": "Pending Review"}, {"sale_id": "66", "date": "2026-06-15", "model": "718 Cayman GT4 RS", "year": "2024", "price": 176400.0, "pay": "Credit Card", "city": "Plano", "state": "TX", "status": "Delivered"}, {"sale_id": "67", "date": "INVALID", "model": "Panamera 4 E-Hybrid", "year": "2022", "price": 108500.0, "pay": "Bank Transfer", "city": "Newark", "state": "NJ", "status": "Cancelled"}, {"sale_id": "68", "date": "2026-07-07", "model": "Macan", "year": "2021", "price": 59000.0, "pay": "Financing", "city": "Greensboro", "state": "NC", "status": "Awaiting Delivery"}, {"sale_id": "69", "date": "2026-07-20", "model": "Taycan Turbo S", "year": "2025", "price": 218000.0, "pay": "Wire Transfer", "city": "Lincoln", "state": "NE", "status": "Pending"}, {"sale_id": "70", "date": "INVALID", "model": "Cayenne S", "year": "2024", "price": 99950.0, "pay": "Debit Card", "city": "Jersey City", "state": "NJ", "status": "Delivered"}, {"sale_id": "71", "date": "2026-04-08", "model": "911 Carrera GTS", "year": "2024", "price": 121750.0, "pay": "Credit Card", "city": "Chandler", "state": "AZ", "status": "Delivered"}, {"sale_id": "72", "date": "2026-08-18", "model": "718 Boxster GTS", "year": "2023", "price": 91500.0, "pay": "Lease", "city": "Reno", "state": "NV", "status": "Shipped"}, {"sale_id": "73", "date": "2026-08-31", "model": "Panamera Turbo S", "year": "2022", "price": 134000.0, "pay": "Wire Transfer", "city": "Buffalo", "state": "NY", "status": "In Transit"}, {"sale_id": "74", "date": "2026-09-09", "model": "Macan GTS", "year": "2024", "price": 96800.0, "pay": "ACH Payment", "city": "Durham", "state": "NC", "status": "Delivered"}, {"sale_id": "75", "date": "2026-09-17", "model": "Taycan 4S", "year": "2025", "price": 131600.0, "pay": "Wire Transfer", "city": "Laredo", "state": "TX", "status": "Pending Approval"}, {"sale_id": "76", "date": "2026-09-28", "model": "Cayenne E-Hybrid", "year": "2023", "price": 94300.0, "pay": "Cash", "city": "Madison", "state": "WI", "status": "Delivered"}, {"sale_id": "77", "date": "2026-10-06", "model": "911 Turbo S", "year": "2025", "price": 242000.0, "pay": "Crypto Payment", "city": "Lubbock", "state": "TX", "status": "Awaiting Pickup"}, {"sale_id": "78", "date": "2026-10-16", "model": "718 Cayman S", "year": "2022", "price": 82750.0, "pay": "Credit Card", "city": "Toledo", "state": "OH", "status": "Cancelled"}, {"sale_id": "79", "date": "2026-10-29", "model": "Macan Electric", "year": "2026", "price": 91300.0, "pay": "Wire Transfer", "city": "Irvine", "state": "CA", "status": "Delivered"}, {"sale_id": "80", "date": "2026-11-03", "model": "Panamera", "year": "2021", "price": 79900.0, "pay": "Financing", "city": "Garland", "state": "TX", "status": "Pending"}, {"sale_id": "81", "date": "INVALID", "model": "Cayenne Coupe", "year": "2024", "price": 111000.0, "pay": "Bank Transfer", "city": "Irving", "state": "TX", "status": "In Transit"}, {"sale_id": "82", "date": "2026-12-11", "model": "911 Targa 4S", "year": "2023", "price": 156500.0, "pay": "Cash", "city": "Chesapeake", "state": "VA", "status": "Delivered"}, {"sale_id": "83", "date": "2026-12-24", "model": "Taycan", "year": "2025", "price": 119900.0, "pay": "Lease", "city": "Scottsdale", "state": "AZ", "status": "Pending"}, {"sale_id": "84", "date": "INVALID", "model": "Macan T", "year": "2022", "price": 73200.0, "pay": "Wire Transfer", "city": "Norfolk", "state": "VA", "status": "Delivered"}, {"sale_id": "85", "date": "2026-12-28", "model": "911 GT3", "year": "2024", "price": 224000.0, "pay": "Wire Transfer", "city": "Boise", "state": "ID", "status": "Awaiting Delivery"}, {"sale_id": "86", "date": "2027-01-15", "model": "911 Carrera", "year": "2024", "price": 126900.0, "pay": "Credit Card", "city": "Orlando", "state": "FL", "status": "Delivered"}, {"sale_id": "87", "date": "2027-01-29", "model": "Cayenne", "year": "2023", "price": 84500.0, "pay": "Bank Transfer", "city": "San Jose", "state": "CA", "status": "Pending"}, {"sale_id": "88", "date": "2027-02-11", "model": "Macan S", "year": "2022", "price": 69800.0, "pay": "Financing", "city": "Tampa", "state": "FL", "status": "Delivered"}, {"sale_id": "89", "date": "INVALID", "model": "Taycan 4S", "year": "2025", "price": 132700.0, "pay": "Wire Transfer", "city": "Denver", "state": "CO", "status": "In Transit"}, {"sale_id": "90", "date": "2027-03-05", "model": "Panamera", "year": "2021", "price": 81000.0, "pay": "Cash", "city": "Austin", "state": "TX", "status": "Delivered"}, {"sale_id": "91", "date": "2027-03-18", "model": "718 Cayman", "year": "2023", "price": 78900.0, "pay": "Debit Card", "city": "Seattle", "state": "WA", "status": "Cancelled"}, {"sale_id": "92", "date": "2027-04-02", "model": "911 Turbo S", "year": "2026", "price": 249300.0, "pay": "Wire Transfer", "city": "Boston", "state": "MA", "status": "Awaiting Delivery"}, {"sale_id": "93", "date": "INVALID", "model": "Cayenne Coupe", "year": "2024", "price": 108750.0, "pay": "Wire Transfer", "city": "Phoenix", "state": "AZ", "status": "Pending Approval"}, {"sale_id": "94", "date": "INVALID", "model": "Macan Electric", "year": "2026", "price": 92600.0, "pay": "Financing", "city": "Chicago", "state": "IL", "status": "Shipped"}, {"sale_id": "95", "date": "2027-05-12", "model": "Taycan Turbo", "year": "2025", "price": 164000.0, "pay": "ACH Payment", "city": "Dallas", "state": "TX", "status": "In Transit"}, {"sale_id": "96", "date": "2027-05-27", "model": "Panamera 4S", "year": "2024", "price": 119000.0, "pay": "Credit Card", "city": "San Francisco", "state": "CA", "status": "Delivered"}, {"sale_id": "97", "date": "INVALID", "model": "911 GT3", "year": "2026", "price": 232500.0, "pay": "Wire Transfer", "city": "Las Vegas", "state": "NV", "status": "Pending"}, {"sale_id": "98", "date": "2027-06-18", "model": "Cayenne E-Hybrid", "year": "2023", "price": 96800.0, "pay": "Lease", "city": "Charlotte", "state": "NC", "status": "Delivered"}, {"sale_id": "99", "date": "2027-07-03", "model": "Macan T", "year": "2022", "price": 74400.0, "pay": "Cash", "city": "Mesa", "state": "AZ", "status": "Awaiting Pickup"}, {"sale_id": "100", "date": "2027-07-22", "model": "Taycan GTS", "year": "2025", "price": 148500.0, "pay": "Crypto Payment", "city": "Atlanta", "state": "GA", "status": "Delivered"}, {"sale_id": "101", "date": "2027-08-08", "model": "718 Boxster", "year": "2021", "price": 71900.0, "pay": "Bank Transfer", "city": "Long Beach", "state": "CA", "status": "Pending"}, {"sale_id": "102", "date": "INVALID", "model": "911 Targa 4", "year": "2024", "price": 143250.0, "pay": "Financing", "city": "Oakland", "state": "CA", "status": "In Transit"}, {"sale_id": "103", "date": "2027-09-19", "model": "Panamera Turbo", "year": "2020", "price": 137500.0, "pay": "Wire Transfer", "city": "Tulsa", "state": "OK", "status": "Delivered"}, {"sale_id": "104", "date": "2027-09-25", "model": "Cayenne Turbo GT", "year": "2025", "price": 204800.0, "pay": "Credit Card", "city": "Wichita", "state": "KS", "status": "Pending"}, {"sale_id": "105", "date": "2027-10-01", "model": "911 Dakar", "year": "2024", "price": 271700.0, "pay": "Lease", "city": "New Orleans", "state": "LA", "status": "Delivered"}];
+let cityChart, yearChart;
+
+function valid(v){return v && v!=="nan" && v!=="INVALID" && v!=="None" && v!=="null";}
+function uniq(key){return [...new Set(DATA.map(x=>x[key]).filter(valid))].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR',{numeric:true}));}
+function fillSelect(id,key,label){
+  const el=document.getElementById(id);
+  uniq(key).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)});
+  el.addEventListener('change',render);
+}
+fillSelect('model','model'); fillSelect('year','year'); fillSelect('city','city'); fillSelect('pay','pay');
+
+function filtered(){
+  const m=document.getElementById('model').value, y=document.getElementById('year').value, c=document.getElementById('city').value, p=document.getElementById('pay').value;
+  return DATA.filter(x=>(!m||x.model===m)&&(!y||x.year===y)&&(!c||x.city===c)&&(!p||x.pay===p));
+}
+function countBy(arr,key){return arr.reduce((a,x)=>{if(valid(x[key]))a[x[key]]=(a[x[key]]||0)+1;return a},{})}
+function topEntry(obj){const e=Object.entries(obj).sort((a,b)=>b[1]-a[1])[0];return e||['—',0]}
+function money(v){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(v||0)}
+
+function render(){
+  const d=filtered();
+  document.getElementById('kpiSales').textContent=d.length.toLocaleString('pt-BR');
+  document.getElementById('kpiRevenue').textContent=money(d.reduce((s,x)=>s+(x.price||0),0));
+  const [tm,tc]=topEntry(countBy(d,'model')); const [ty,yc]=topEntry(countBy(d,'year'));
+  document.getElementById('kpiModel').textContent=tm; document.getElementById('kpiModelNote').textContent=`${tc} vendas`;
+  document.getElementById('kpiYear').textContent=ty; document.getElementById('kpiYearNote').textContent=`${yc} vendas`;
+
+  const cityCounts=countBy(d,'city');
+  const topCities=Object.entries(cityCounts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
+  const models=[...new Set(d.map(x=>x.model).filter(valid))].slice(0,6);
+  const datasets=models.map((m,i)=>({label:m,data:topCities.map(c=>d.filter(x=>x.city===c&&x.model===m).length),
+    borderWidth:0,backgroundColor:i===0?'#d5001c':`rgba(210,210,205,${Math.max(.16,.62-i*.09)})`}));
+  if(cityChart)cityChart.destroy();
+  cityChart=new Chart(document.getElementById('cityModelChart'),{type:'bar',data:{labels:topCities,datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aaa',boxWidth:10,font:{size:10}}}},
+    scales:{x:{stacked:true,ticks:{color:'#888',font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:'#777',font:{size:10}},grid:{color:'#252525'}}}}});
+
+  const years=countBy(d,'year'); const labels=Object.keys(years).sort((a,b)=>String(a).localeCompare(String(b),'pt-BR',{numeric:true}));
+  if(yearChart)yearChart.destroy();
+  yearChart=new Chart(document.getElementById('yearChart'),{type:'line',data:{labels,datasets:[{data:labels.map(x=>years[x]),borderColor:'#d5001c',backgroundColor:'rgba(213,0,28,.12)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#d5001c'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#888',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#777',font:{size:10}},grid:{color:'#252525'}}}}});
+
+  const modelCounts=countBy(d,'model'), rows=Object.entries(modelCounts).sort((a,b)=>b[1]-a[1]).slice(0,6), max=rows[0]?.[1]||1;
+  document.getElementById('modelTable').innerHTML=`<table class="table"><thead><tr><th>#</th><th>Modelo</th><th>Vendas</th><th>Share</th></tr></thead><tbody>`+
+    rows.map((r,i)=>`<tr><td class="rank">${String(i+1).padStart(2,'0')}</td><td class="model">${r[0]}</td><td>${r[1]}</td><td><div class="bar"><i style="width:${r[1]/max*100}%"></i></div></td></tr>`).join('')+`</tbody></table>`;
+
+  const cityTop=Object.entries(cityCounts).sort((a,b)=>b[1]-a[1])[0];
+  const cityBest=cityTop ? topEntry(countBy(d.filter(x=>x.city===cityTop[0]),'model')) : ['—',0];
+  const payTop=topEntry(countBy(d,'pay'));
+  document.getElementById('insights').innerHTML=`
+    <div class="insight"><span class="badge">Cidade líder</span><strong>${cityTop?cityTop[0]:'—'}</strong><p>${cityTop?`${cityTop[1]} vendas; o modelo mais popular na cidade é <b>${cityBest[0]}</b>, com ${cityBest[1]} unidades.`:'Sem dados suficientes para o recorte.'}</p></div>
+    <div class="insight"><span class="badge">Ano de maior saída</span><strong>${ty}</strong><p>${ty!=='—'?`O Model Year ${ty} concentra ${yc} vendas no recorte atual, sendo o principal sinal de preferência temporal.`:'Selecione filtros válidos para identificar o ano líder.'}</p></div>
+    <div class="insight"><span class="badge">Pagamento predominante</span><strong>${payTop[0]}</strong><p>${payTop[0]!=='—'?`${payTop[1]} vendas utilizam este método de pagamento. Use o filtro Pay Method para aprofundar o comportamento por cidade e modelo.`:'Sem dados.'}</p></div>`;
+}
+function resetFilters(){['model','year','city','pay'].forEach(id=>document.getElementById(id).value='');render()}
+render();
+</script>
+</body>
+</html>
